@@ -1,0 +1,27 @@
+name: QR Code Bot
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request == null && startsWith(github.event.comment.body, "!getgame")
+    steps:
+      - uses: actions/checkout@v3
+      - name: Call QR API
+        id: qr
+        run: |
+          GAME=$(echo "${{ github.event.comment.body }}" | awk '{print $2}')
+          RESPONSE=$(curl -s "${{ secrets.SHEET_API_URL }}?discord_id=${{ github.event.comment.user.login }}&game=$GAME")
+          echo "::set-output name=resp::$RESPONSE"
+      - name: Respond in Discord
+        uses: crazy-max/ghaction-discord@v2
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            ${{ fromJson(steps.qr.outputs.resp).qr ? 
+              "**${{ github.event.issue.comment.user.login }}**, here is your QR: `${{ fromJson(steps.qr.outputs.resp).qr }}`" :
+              "🚫 No QR left for game **${GAME}**, sorry!" }}
