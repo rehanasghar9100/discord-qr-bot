@@ -25,9 +25,10 @@ jobs:
       - name: Send Discord follow-up
         run: |
           CONTENT=$(jq -r '.qr // .error' response.json)
-
+      
           curl -X POST \
             "https://discord.com/api/v10/webhooks/${{ secrets.DISCORD_CLIENT_ID }}/$INTERACTION_TOKEN" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
             -d "{\"content\": \"$CONTENT\"}"
+
