@@ -1,0 +1,27 @@
+name: Register Slash Command
+
+on:
+  workflow_dispatch:
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register /getqr
+        run: |
+          curl -X POST "https://discord.com/api/v10/applications/${{ secrets.DISCORD_CLIENT_ID }}/commands" \
+          -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+                "name": "getqr",
+                "description": "Get a QR code for a game",
+                "type": 1,
+                "options": [
+                  {
+                    "name": "game",
+                    "description": "Game name",
+                    "type": 3,
+                    "required": true
+                  }
+                ]
+              }'
