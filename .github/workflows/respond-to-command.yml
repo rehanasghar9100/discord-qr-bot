@@ -1,0 +1,28 @@
+name: Respond to Slash Command
+
+on:
+  repository_dispatch:
+    types: [slash-command]
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call QR API
+        id: qr
+        run: |
+          GAME="${{ github.event.client_payload.game }}"
+          DISCORD_ID="${{ github.event.client_payload.user_id }}"
+          RESPONSE=$(curl -s "${{ secrets.SHEET_API_URL }}?discord_id=$DISCORD_ID&game=$GAME")
+          echo "::set-output name=resp::$RESPONSE"
+
+      - name: Send Message Back
+        run: |
+          CONTENT=$(echo '${{ steps.qr.outputs.resp }}' | jq -r '.qr // .error')
+          curl -X POST "https://discord.com/api/v10/webhooks/${{ secrets.DISCORD_CLIENT_ID }}/interactions/${{ github.event.client_payload.interaction_id }}/callback" \
+            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"type\": 4,
+              \"data\": { \"content\": \"$CONTENT\" }
+            }"
