@@ -1,5 +1,4 @@
 name: Respond to Slash Command
-
 on:
   repository_dispatch:
     types: [slash-command]
@@ -8,27 +7,22 @@ jobs:
   handle:
     runs-on: ubuntu-latest
     steps:
+      - run: echo "👀 Received dispatch payload: ${{ toJson(github.event) }}"
       - name: Call QR API
         id: qr
         run: |
           GAME="${{ github.event.client_payload.game }}"
           DISCORD_ID="${{ github.event.client_payload.user_id }}"
           INTERACTION_TOKEN="${{ github.event.client_payload.interaction_token }}"
-          INTERACTION_ID="${{ github.event.client_payload.interaction_id }}"
-
           RESPONSE=$(curl -s "${{ secrets.SHEET_API_URL }}?discord_id=$DISCORD_ID&game=$GAME")
+          echo "🎯 Response from Sheet API: $RESPONSE"
           echo "$RESPONSE" > response.json
-          echo "RESPONSE_JSON=$RESPONSE" >> $GITHUB_ENV
-          echo "INTERACTION_ID=$INTERACTION_ID" >> $GITHUB_ENV
-          echo "INTERACTION_TOKEN=$INTERACTION_TOKEN" >> $GITHUB_ENV
 
       - name: Send Discord follow-up
         run: |
           CONTENT=$(jq -r '.qr // .error' response.json)
-      
+          echo "📤 Sending to Discord: $CONTENT"
           curl -X POST \
             "https://discord.com/api/v10/webhooks/${{ secrets.DISCORD_CLIENT_ID }}/$INTERACTION_TOKEN" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
             -d "{\"content\": \"$CONTENT\"}"
-
