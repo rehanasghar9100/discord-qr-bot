@@ -13,16 +13,21 @@ jobs:
         run: |
           GAME="${{ github.event.client_payload.game }}"
           DISCORD_ID="${{ github.event.client_payload.user_id }}"
-          RESPONSE=$(curl -s "${{ secrets.SHEET_API_URL }}?discord_id=$DISCORD_ID&game=$GAME")
-          echo "::set-output name=resp::$RESPONSE"
+          INTERACTION_TOKEN="${{ github.event.client_payload.interaction_token }}"
+          INTERACTION_ID="${{ github.event.client_payload.interaction_id }}"
 
-      - name: Send Message Back
+          RESPONSE=$(curl -s "${{ secrets.SHEET_API_URL }}?discord_id=$DISCORD_ID&game=$GAME")
+          echo "$RESPONSE" > response.json
+          echo "RESPONSE_JSON=$RESPONSE" >> $GITHUB_ENV
+          echo "INTERACTION_ID=$INTERACTION_ID" >> $GITHUB_ENV
+          echo "INTERACTION_TOKEN=$INTERACTION_TOKEN" >> $GITHUB_ENV
+
+      - name: Send Discord follow-up
         run: |
-          CONTENT=$(echo '${{ steps.qr.outputs.resp }}' | jq -r '.qr // .error')
-          curl -X POST "https://discord.com/api/v10/webhooks/${{ secrets.DISCORD_CLIENT_ID }}/interactions/${{ github.event.client_payload.interaction_id }}/callback" \
-            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          CONTENT=$(jq -r '.qr // .error' response.json)
+
+          curl -X POST \
+            "https://discord.com/api/v10/webhooks/${{ secrets.DISCORD_CLIENT_ID }}/$INTERACTION_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"type\": 4,
-              \"data\": { \"content\": \"$CONTENT\" }
-            }"
+            -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+            -d "{\"content\": \"$CONTENT\"}"
